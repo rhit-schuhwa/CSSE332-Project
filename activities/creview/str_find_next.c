@@ -49,7 +49,14 @@
  * @returns a pointer to the beginning of the next field.
  */
 char *find_next_field(char *input) {
-  // Your code goes here.
+    char *ret = input;
+    for (int i = 0; i < strlen(input) - 1; i++) {
+	if (input[i] == ' ' && input[i+1] == ' ') {
+	    ret = input + i + 2;
+	    break;
+	}
+    }
+    return ret;
 }
 
 //
@@ -71,3 +78,30 @@ char *find_next_field(char *input) {
 //
 
 // Your code starts here.
+int main() {
+    char* test_str = "a  b";
+    char* res = find_next_field(test_str);
+    printf("Test Case 1:\nInput: \"%s\"\nExpected Output: \"b\"\nActual Output: \"%s\"\n", test_str, res);
+    if (strcmp("b", res) == 0) {
+	printf("Test 1 PASSED\n\n");
+    } else {
+	printf("Test 1 FAILED\n\n");
+    }
+
+    test_str = "A  big long test  string with* things    in it.";
+    res = find_next_field(test_str);
+    printf("Test Case 2:\nInput: \"%s\"\nExpected Output: \"big long test  string with* things    in it.\"\nActual Output: \"%s\"\n", test_str, res);
+    if (strcmp("big long test  string with* things    in it.", res) == 0) {
+	printf("Test 2 PASSED\n\n");
+    } else {
+	printf("Test 2 FAILED\n\n");
+    }
+
+    test_str = find_next_field(res);
+    printf("Test Case 3:\nInput: \"%s\"\nExpected Output: \"string with* things    in it.\"\nActual Output: \"%s\"\n", res, test_str);
+    if (strcmp("string with* things    in it.", test_str) == 0) {
+	printf("Test 3 PASSED\n\n");
+    } else {
+	printf("Test 3 FAILED\n\n");
+    }
+}
