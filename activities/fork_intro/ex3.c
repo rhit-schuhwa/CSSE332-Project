@@ -26,3 +26,42 @@
  */
 
 // TODO: Add your code here!
+
+void child_gen(int curr_child, int max)
+{
+    int rc = fork();
+
+    if (rc < 0)
+    {
+        perror("Failed to fork a process");
+        exit(EXIT_FAILURE);
+    }
+
+    if (rc == 0)
+    {
+        printf("Child %d has pid: %d\n", curr_child, getpid());
+        if(curr_child < max){
+            child_gen(curr_child + 1, max);
+        }
+        exit(EXIT_SUCCESS);
+    }
+    else
+    {
+        wait(NULL);
+    }
+}
+
+int main(int argc, char **argv)
+{
+    if (argc != 2)
+    {
+        printf("USAGE: ./ex3 <num_children>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int max = atoi(argv[1]);
+    printf("Parent has pid: %d\n", getpid());
+    child_gen(1, max);
+
+    exit(EXIT_SUCCESS);
+}

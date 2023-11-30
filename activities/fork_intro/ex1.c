@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 // STEP 1:
 // After our in-class discussion, write code here that will create two
@@ -27,8 +28,14 @@ int
 main(int argc, char **argv)
 {
   // TODO: Add your code here to follow the steps above.
-
-
+  int rc = fork();
+  if (rc == 0) {
+    sleep(1);
+    printf("Hello from child process with pid = %d\n", getpid());
+  } else {
+    printf("Hello from parent process with pid = %d\n", getpid());
+    wait(NULL);
+  }
   exit(EXIT_SUCCESS);
 }
 
