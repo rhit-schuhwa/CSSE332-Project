@@ -29,6 +29,7 @@ main(int argc, char **argv)
     /* child process */
     global_var = 100;
     printf("%d: My value of the global variable is %d\n", getpid(), global_var);
+    exit(0);
   } else {
     /* parent process */
     global_var = 200;

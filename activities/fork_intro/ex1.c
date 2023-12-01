@@ -32,6 +32,7 @@ main(int argc, char **argv)
   if (rc == 0) {
     sleep(1);
     printf("Hello from child process with pid = %d\n", getpid());
+    exit(0);
   } else {
     printf("Hello from parent process with pid = %d\n", getpid());
     wait(NULL);
