@@ -21,10 +21,18 @@
  *  Hint: Use `man signal` to see what type of signals to work with.
  *
  */
+void sigfpe_handler(int signum) {
+    if (signum == SIGFPE) {
+	printf("Division by 0 error\n");
+    }
+    exit(EXIT_FAILURE);
+}
 
 int main(int argc, char **argv) {
   unsigned int x = -1;
   unsigned int y = 30;
+
+  signal(SIGFPE, sigfpe_handler);
 
   x = x + 1;
   y = y / x;

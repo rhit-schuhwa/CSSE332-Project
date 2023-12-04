@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 
 /*
    Here is a sample program representing a long running process that
@@ -31,6 +32,24 @@
 
 */
 
+static void mask_signal(int signum)
+{
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, signum);
+  if(sigprocmask(SIG_BLOCK, &mask, NULL) < 0)
+    perror("sigprocmask:");
+}
+
+static void unmask_signal(int signum)
+{
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, signum);
+  if(sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0)
+    perror("sigprocmask:");
+}
+
 void part1()
 {
   printf("Starting slow process Part 1 of 3.  It is currently safe to abort this process with ^C.\n");
@@ -46,17 +65,24 @@ void part2()
 void part3()
 {
   printf("Starting slow process Part 3 of 3.  If this part takes more than 4 seconds you should abort it.\n");
+  alarm(4);
   sleep(30);
 }
 
 void cleanup() {
-  printf("Abort detected!  Cleaning up and exiting...");
+  printf("Abort detected!  Cleaning up and exiting...\n");
   exit(0);
 }
 
 int main(int argc, char **argv)
 {
+  signal(SIGINT, cleanup);
   part1();
-  // part2();
-  // part3();
+
+  mask_signal(SIGINT);
+  part2();
+  unmask_signal(SIGINT);
+  
+  signal(SIGALRM, cleanup);
+  part3();
 };
