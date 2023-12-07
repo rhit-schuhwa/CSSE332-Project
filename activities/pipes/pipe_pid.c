@@ -25,15 +25,33 @@
  */
 
 int main(int argc, char **argv) {
+  int fd[2];
   pid_t pid;
+  char readbuff[5];
+
+  if (pipe(fd) < 0) {
+    perror("PANIC: pipe failed: ");
+    exit(99);
+  }
 
   pid = fork();
   if(pid == 0) {
     // child, I am the writer
+    close(fd[0]);
+    printf("Child pid: %d\n", getpid());
+    int cpid = getpid();
+    write(fd[1], &cpid, sizeof(int));
+    close(fd[1]);
     exit(0);
+  } else {
+    // parent, I am the reader
+    close(fd[1]);
+    read(fd[0], readbuff, sizeof(int));
+    readbuff[sizeof(int)] = 0;
+    int cpid = *((int*)readbuff);
+    printf("Parent read from child: %d\n",  cpid);
   }
-
-  // parent, I am the reader
+  close(fd[0]);
   exit(0);
 }
 

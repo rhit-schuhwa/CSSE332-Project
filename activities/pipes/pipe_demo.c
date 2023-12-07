@@ -44,6 +44,7 @@ int main(int argc, char **argv)
 
   // Step 2:
   //  Now we can fork.
+  pid = fork();
   if(!pid) {
     // I am the child, I will be the WRITER
 

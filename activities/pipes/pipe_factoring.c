@@ -41,7 +41,15 @@ int main(void)
   // I think 666666662 gives good results
   scanf("%llu",&target);
 
-  int pid = fork();
+  int fd[2];
+  int pid;
+
+  if (pipe(fd) < 0) {
+    perror("PANIC: pipe failed");
+    return 1;
+  }
+
+  pid = fork();
   if(pid == 0) {
     start = 2;
   } else {
@@ -52,14 +60,21 @@ int main(void)
       // I'm the parent
       wait(NULL);
       wait(NULL);
+
+      close(fd[1]);
+      while(read(fd[0], &i, sizeof(i)) > 0){
+	printf("%llu is a factor\n", i);
+      }
       printf("Finished.\n");
+      close(fd[0]);
       return 0;
     }
   }
 
   for(i = start; i <= target/2; i = i + 2) {
     if(target % i == 0) {
-      printf("%llu is a factor\n", i);
+      //printf("%llu is a factor\n", i);
+      write(fd[1], &i, sizeof(i));
     }
   }
   return 0;

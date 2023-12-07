@@ -56,6 +56,9 @@ int main(int argc, char **argv)
     }
 
     printf("[Child %d] Done writing the 5 characters\n", getpid());
+
+    close(fd[1]);
+
     while(1);
 
     // leave
@@ -68,6 +71,9 @@ int main(int argc, char **argv)
     while((nbytes = read(fd[0], readbuff, 1)) > 0);
 
     printf("[Parent %d] Done reading and now doing other stuff\n", getpid());
+    
+    close(fd[0]);
+    
     while(1);
 
     // leave
