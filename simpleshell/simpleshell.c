@@ -79,6 +79,9 @@ int main() {
 	    execlp(parsed_command[0], parsed_command[0], parsed_command[1], NULL);
 	}
     } else {
+	if (!isBG) {
+	    wait(&status);
+	}
 	execlp("./simpleshell", "./simpleshell", NULL);
     }
   }
