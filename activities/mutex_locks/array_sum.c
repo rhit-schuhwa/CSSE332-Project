@@ -15,6 +15,7 @@ int *array;
 int array_size;
 int share;
 volatile unsigned long long sum;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void output_time_difference(char* name, struct timeval* start,
                                    struct timeval* end) {
@@ -27,6 +28,14 @@ static void output_time_difference(char* name, struct timeval* start,
 
 void *run_fn(void *arg) {
   // TODO: Add your thread code here...
+  int idx = *(int*)arg;
+  unsigned long long local_sum = 0;
+  for (int i = idx; i < idx + share; i++) {
+    local_sum += array[i];
+  }
+  pthread_mutex_lock(&lock);
+  sum += local_sum;
+  pthread_mutex_unlock(&lock);
   return NULL;
 }
 
@@ -65,11 +74,19 @@ int main(int argc, char **argv) {
   //
 
   // TODO: Add any initialization code here.
+  pthread_t p1, p2;
+  share = array_size/2;
+  int id1 = 0, id2 = share;
 
   gettimeofday(&start, NULL);
   // TODO: Add your pthread creation and joining code here bet the first call
   // to gettimeofday and the second call to gettimeofday.
+  pthread_create(&p1, NULL, run_fn, &id1);
+  pthread_create(&p2, NULL, run_fn, &id2);
 
+  pthread_join(p1, NULL);
+  pthread_join(p2, NULL);
+  
   gettimeofday(&end, NULL);
 
   printf("== \tThe value of the sum under threads is %llu ==\n", sum);
