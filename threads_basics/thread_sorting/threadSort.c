@@ -75,12 +75,27 @@ void MergeSort(int array[], int inputLength) {
     MergeSort(array, mid);
     MergeSort(array + mid, inputLength - mid);
     // merge's last input is an inclusive index
-    printf("calling merge 0->%d, 1->%d\n mid %d\n",array[0], array[1], mid); 
+    //printf("calling merge 0->%d, 1->%d\n mid %d\n",array[0], array[1], mid); 
     Merge(array, 0, mid, inputLength - 1);
   }
 }
 
 // you might want some globals, put them here
+struct thread_data {
+  int sortType;
+  int* arr;
+  int start;
+  int end;
+  suseconds_t time;
+};
+
+struct sort_data {
+  char* sortName;
+  int count;
+  float sum;
+  suseconds_t min;
+  suseconds_t max;
+};
 
 // here's a global I used you might find useful
 char* descriptions[] = {"brute force","bubble","merge"};
@@ -90,7 +105,32 @@ char* descriptions[] = {"brute force","bubble","merge"};
 //
 // you can do it a different way but I think this is easiest
 void* thread_dispatch(void* data) {
-
+  struct thread_data* tdata = (struct thread_data*)data;
+  int sortType = tdata->sortType;
+  int* arr = tdata->arr;
+  int start = tdata->start;
+  int end = tdata->end;
+  struct timeval startt, stopt;
+  printf("Sorting indexes %d-%d with %s\n", start, end, descriptions[sortType]);
+  sleep(1);
+  gettimeofday(&startt, NULL);
+  switch (sortType) {
+    case 0:
+      BruteForceSort(arr+start, end-start+1);
+      break;
+    case 1:
+      BubbleSort(arr+start, end-start+1);
+      break;
+    case 2:
+      MergeSort(arr+start, end-start+1);
+      break;
+    default:
+      printf("I did something wrong.\n");
+      break;
+  }
+  gettimeofday(&stopt, NULL);
+  tdata->time = stopt.tv_usec - startt.tv_usec;
+  return 0;
 }
 
 int main(int argc, char** argv) {
@@ -133,10 +173,46 @@ int main(int argc, char** argv) {
   }
 
   // create your threads here
+  pthread_t threads[n];
+  struct thread_data tdata[n];
+  for (int i = 0; i < n; i++) {
+    tdata[i].sortType = i%3;
+    tdata[i].arr = data_array;
+    tdata[i].start = i*vals_per_thread;
+    tdata[i].end = (i+1)*vals_per_thread-1;
+    pthread_create(&threads[i], NULL, thread_dispatch, &tdata[i]);
+  }
 
   // wait for them to finish
+  for (int i = 0; i < n; i++) {
+    pthread_join(threads[i], 0);
+  }
 
   // print out the algorithm summary statistics
+  struct sort_data results[3];
+  for (int i = 0; i < 3; i++) {
+    results[i].sortName = descriptions[i];
+    results[i].count = 0;
+    results[i].sum = 0;
+    results[i].min = tdata[i].time;
+    results[i].max = tdata[i].time;
+  }
+
+  int sortTypeIndex;
+  for (int i = 0; i < n; i++) {
+    printf("Sorting indexes %d-%d with %s done in %ld usecs\n", tdata[i].start, tdata[i].end, descriptions[tdata[i].sortType], tdata[i].time);
+    sortTypeIndex = tdata[i].sortType;
+    results[sortTypeIndex].count++;
+    results[sortTypeIndex].sum += tdata[i].time;
+    if (tdata[i].time < results[sortTypeIndex].min)
+      results[sortTypeIndex].min = tdata[i].time;
+    if (tdata[i].time > results[sortTypeIndex].max)
+      results[sortTypeIndex].max = tdata[i].time;
+  }
+
+  for (int i = 0; i < 3; i++) {
+    printf("%s avg %f min %ld max %ld\n", results[i].sortName, results[i].sum/results[i].count, results[i].min, results[i].max);
+  }
 
   // print out the result array so you can see the sorting is working
   // you might want to comment this out if you're testing with large data sets

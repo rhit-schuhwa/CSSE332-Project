@@ -10,13 +10,15 @@
  */
 int total;
 
-pthread_mutex_t lock;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void *add10000(void *arg) {
   for (int i = 0; i < 10000; i++) {
     // this area: critical section
     // want this to run in mutual exclusion mode
+    pthread_mutex_lock(&lock);
     total++;
+    pthread_mutex_unlock(&lock);
   }
 
   return NULL;
@@ -25,7 +27,7 @@ void *add10000(void *arg) {
 int main(int argc, char **argv) {
   total = 0;
   pthread_t threads[NUM_THREADS];
-  pthread_mutex_init(&lock, 0);
+  //pthread_mutex_init(&lock, 0); // not in instructions
 
   int i;
   for (i = 0; i < NUM_THREADS; i++) {

@@ -22,10 +22,24 @@
 #include <sys/wait.h>
 #include <pthread.h>
 
+unsigned long long int target;
+int share;
+
+void *thread_fn(void *arg) {
+  unsigned long long int i;
+  int id = *(int*) arg;
+  for (i = id + 1; i <= target/2; i += share) {
+    printf("thread %d testing %llu\n", id, i);
+    if (target % i == 0) {
+      printf("%llu is a factor\n", i);
+    }
+  }
+  return 0;
+}
 
 int main(void) {
   /* you can ignore the linter warning about this */
-  unsigned long long int target, i, start = 0;
+  //unsigned long long int target, i, start = 0;
   int numThreads;
   printf("Give a number to factor.\n");
   scanf("%llu", &target);
@@ -37,15 +51,28 @@ int main(void) {
     return 0;
   }
 
-  for (i = 2; i <= target/2; i = i + 1) {
-    /* You'll want to keep this testing line in.  Otherwise it goes so
-       fast it can be hard to detect your code is running in
-       parallel. Also test with a large number (i.e. > 3000) */
-    printf("testing %llu\n", i);
-    if (target % i == 0) {
-      printf("%llu is a factor\n", i);
-    }
+  pthread_t threads[numThreads];
+  int ids[numThreads];
+  share = numThreads;
+  for (int i = 0; i < numThreads; i++) {
+    ids[i] = i + 1;
+    printf("running thread\n");
+    pthread_create(&threads[i], NULL, thread_fn, &ids[i]);
   }
+  for (int i = 0; i < numThreads; i++) {
+    pthread_join(threads[i], 0);
+  }
+
+//  for (i = 2; i <= target/2; i = i + 1) {
+//    /* You'll want to keep this testing line in.  Otherwise it goes so
+//       fast it can be hard to detect your code is running in
+//       parallel. Also test with a large number (i.e. > 3000) */
+//    printf("testing %llu\n", i);
+//    if (target % i == 0) {
+//      printf("%llu is a factor\n", i);
+//    }
+//  }
+
   return 0;
 }
 
