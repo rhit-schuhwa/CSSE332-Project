@@ -10,6 +10,9 @@
  * function below.
  */
 
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+int ready = 0;
 
 /*
  * exit from a given thread
@@ -17,6 +20,10 @@
 void
 thread_exit(void) {
 	/* Implement this function */
+	pthread_mutex_lock(&m);
+	ready = 1;
+	pthread_cond_signal(&c);
+	pthread_mutex_unlock(&m);
 }
 
 void *
@@ -40,6 +47,11 @@ child(void *ignored) {
 void
 thread_join(void) {
 	/* Implement this function */
+	pthread_mutex_lock(&m);
+	while (!ready) {
+	    pthread_cond_wait(&c, &m);
+	}
+	pthread_mutex_unlock(&m);
 }
 
 int
