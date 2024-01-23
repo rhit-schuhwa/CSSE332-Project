@@ -29,27 +29,77 @@
   This is similar to the readers/writers problem BTW.
  **/
 
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+int num_jobs[] = {0, 0, 0};
+
 void* carpenter(void * ignored) {
+
+  pthread_mutex_lock(&m);
+  while (num_jobs[1] > 0 || num_jobs[2] > 0) {
+    pthread_cond_wait(&c, &m);
+  }
+  num_jobs[0]++;
+  pthread_mutex_unlock(&m);
 
   printf("starting carpentry\n");
   sleep(1);
   printf("finished carpentry\n");
+
+  pthread_mutex_lock(&m);
+  num_jobs[0]--;
+  if (num_jobs[0] == 0) {
+    pthread_cond_broadcast(&c);
+  }
+  pthread_mutex_unlock(&m);
+
   return NULL;
 }
 
 void* painter(void * ignored) {
 
+  pthread_mutex_lock(&m);
+  while (num_jobs[0] > 0 || num_jobs[2] > 0) {
+    pthread_cond_wait(&c, &m);
+  }
+  num_jobs[1]++;
+  pthread_mutex_unlock(&m);
+
   printf("starting painting\n");
   sleep(1);
   printf("finished painting\n");
+  
+  pthread_mutex_lock(&m);
+  num_jobs[1]--;
+  if (num_jobs[1] == 0) {
+    pthread_cond_broadcast(&c);
+  }
+  pthread_mutex_unlock(&m);
+
   return NULL;
 }
 
 void* decorator(void * ignored) {
 
+  pthread_mutex_lock(&m);
+  while (num_jobs[0] > 0 || num_jobs[1] > 0) {
+    pthread_cond_wait(&c, &m);
+  }
+  num_jobs[2]++;
+  pthread_mutex_unlock(&m);
+  
   printf("starting decorating\n");
   sleep(1);
   printf("finished decorating\n");
+  
+  pthread_mutex_lock(&m);
+  num_jobs[2]--;
+  if (num_jobs[2] == 0) {
+    pthread_cond_broadcast(&c);
+  }
+  pthread_mutex_unlock(&m);
+
   return NULL;
 }
 
