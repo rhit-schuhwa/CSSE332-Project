@@ -43,12 +43,27 @@ thread 4 decides to stay in the shower a little longer
 
  */
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+
+int shower = 0;
+int waiting = 0;
+
 void *thread(void *arg)
 {
   int num = *(int*)arg;
   printf("thread %d wants to use the shower\n", num);
   // I reccommend you leave the above print statement outside of
   // any lock, otherwise a certian kind of bug will be less obvious
+  
+  pthread_mutex_lock(&m);
+  waiting++;
+  while (shower > 0) {
+    pthread_cond_wait(&c, &m);
+  }
+  waiting--;
+  shower++;
+  pthread_mutex_unlock(&m);
 
   printf("thread %d is using shower\n", num);
   while(1) {
@@ -60,9 +75,19 @@ void *thread(void *arg)
     //    break;
     // }
 
-    printf("thread %d decides to stay in the shower a little longer\n", num);
+    pthread_mutex_lock(&m);
+    if (waiting > 0) {
+	printf("thread %d is finished with shower\n", num);
+	shower--;
+	pthread_cond_signal(&c);
+	pthread_mutex_unlock(&m);
+	break;
+    }
+    pthread_mutex_unlock(&m);
 
+    printf("thread %d decides to stay in the shower a little longer\n", num);
   }
+
 }
 
 
