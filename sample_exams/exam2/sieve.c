@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 #define MAX_NUM 50
-#define NUM_THREADS 3
+#define NUM_THREADS 50
 
 /*
 
@@ -175,38 +175,66 @@ about this bug.
 
  */
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+
 char nums[MAX_NUM];
 
-void* sieve_for(long num) {
+int num_in = 0;
 
-    printf("starting sieve for %ld\n", num);
-    long current = num + num;
+void* sieve_for(void* input) {
+    long* num = (long*)input;
+
+    pthread_mutex_lock(&m);
+    while (num_in >= 3) {
+      pthread_cond_wait(&c, &m);
+    }
+    num_in++;
+    pthread_mutex_unlock(&m);
+
+    printf("starting sieve for %ld\n", *num);
+    long current = *num + *num;
     while(current < MAX_NUM) {
         usleep(100); // a little wait to make the parallelism easier to notice
-        if(nums[current] != 'C') printf("sieve %ld found composite %ld\n", num, current);
+        if(nums[current] != 'C') printf("sieve %ld found composite %ld\n", *num, current);
         nums[current] = 'C'; // C for composite
-        current = current + num;
+        current = current + *num;
     }
-    printf("sieve for %ld finished\n", num);
+    printf("sieve for %ld finished\n", *num);
+
+    pthread_mutex_lock(&m);
+    num_in--;
+    if (num_in == 0) {
+      pthread_cond_broadcast(&c);
+    }
+    pthread_mutex_unlock(&m);
+
     return NULL;
 }
 
 int main(int argc, char **argv)
 {
   /* TODO: YOUR IMPLEMENTATION GOES HERE */
-  int i;
   pthread_t threads[NUM_THREADS];
-  long params[] = {2, 3, 5};
+  long params[NUM_THREADS];
 
   for(int i = 2; i < MAX_NUM; i++) {
       nums[i] = 'P'; //mark all numbers as potentially prime
   }
 
-
   // these are put in parallel in PART 1
-  sieve_for(2);
-  sieve_for(3);
-  sieve_for(5);
+  //sieve_for(2);
+  //sieve_for(3);
+  //sieve_for(5);
+
+  for (int i = 2; i < NUM_THREADS; i++) { 
+    params[i] = i;
+    pthread_create(&threads[i], NULL, sieve_for, &params[i]);
+  }
+
+  for (int i = 2; i < NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
 
   // here's where you add your loop that starts batches of threads once other
   // threads finish when you do part 2

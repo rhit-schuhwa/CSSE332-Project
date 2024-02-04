@@ -87,22 +87,59 @@ green in northsouth direction
 
  */
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t car = PTHREAD_COND_INITIALIZER;
+pthread_cond_t light = PTHREAD_COND_INITIALIZER;
+
+int num_cars[] = {0, 0};
+int green_dir = 0;  // 0 - ns, 1 - ew
+int is_yellow = 0;
 
 void *north_south(void *arg)
 {
   printf("northsouth car nearing intersection\n");
+
+  pthread_mutex_lock(&m);
+  while (is_yellow || green_dir == 1) {
+    pthread_cond_wait(&car, &m);
+  }
+  num_cars[0]++;
+  pthread_mutex_unlock(&m);
+
   printf("northsouth car entering intersection\n");
   sleep(1);
   printf("northsouth car leaving intersection\n");
+
+  pthread_mutex_lock(&m);
+  num_cars[0]--;
+  if (num_cars[0] == 0) {
+    pthread_cond_signal(&light);
+  }
+  pthread_mutex_unlock(&m);
 }
 
 
 void *east_west(void *arg)
 {
   printf("eastwest car nearing intersection\n");
+  
+  pthread_mutex_lock(&m);
+  while (is_yellow || green_dir == 0) {
+    pthread_cond_wait(&car, &m);
+  }
+  num_cars[1]++;
+  pthread_mutex_unlock(&m);
+
   printf("eastwest car entering intersection\n");
   sleep(1);
   printf("eastwest car leaving intersection\n");
+
+  pthread_mutex_lock(&m);
+  num_cars[1]--;
+  if (num_cars[1] == 0) {
+    pthread_cond_signal(&light);
+  }
+  pthread_mutex_unlock(&m);
 }
 
 
@@ -115,10 +152,31 @@ void *stoplight(void *arg)
     printf("yellow\n");
 
     // we need to wait for the intersection to clear
+    pthread_mutex_lock(&m);
+    is_yellow = 1;
+    while (num_cars[0] > 0) {
+      pthread_cond_wait(&light, &m);
+    }
+    is_yellow = 0;
+    green_dir = 1;
+    pthread_cond_broadcast(&car);
+    pthread_mutex_unlock(&m);
+
     printf("green in eastwest direction\n");
     sleep(1);
-    printf("yellow");
+    printf("yellow\n");
+    
     // we need to wait for the intersection to clear
+    pthread_mutex_lock(&m);
+    is_yellow = 1;
+    while (num_cars[1] > 0) {
+      pthread_cond_wait(&light, &m);
+    }
+    is_yellow = 0;
+    green_dir = 0;
+    pthread_cond_broadcast(&car);
+    pthread_mutex_unlock(&m);
+    
     printf("green in northsouth direction\n");
 
   }

@@ -67,14 +67,25 @@ Example output:
 
  */
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t get = PTHREAD_COND_INITIALIZER;
+pthread_cond_t assign = PTHREAD_COND_INITIALIZER;
 
 int job_to_do = 0;
 
 int get_job() {
 
   // you'll need to do some work to ensure this is safe
-  int my_job = job_to_do;
+  int my_job;
+
+  pthread_mutex_lock(&m);
+  while (job_to_do == 0) {
+    pthread_cond_wait(&get, &m);
+  }
+  my_job = job_to_do;
   job_to_do = 0;
+  pthread_cond_signal(&assign);
+  pthread_mutex_unlock(&m);
   return my_job;
 
 }
@@ -82,7 +93,13 @@ int get_job() {
 void assign_job(int job_num) {
 
   // you'll need to do some work to ensure this is safe
+  pthread_mutex_lock(&m);
+  while (job_to_do != 0) {
+    pthread_cond_wait(&assign, &m);
+  }
   job_to_do = job_num;
+  pthread_cond_signal(&get);
+  pthread_mutex_unlock(&m);
 
 }
 
