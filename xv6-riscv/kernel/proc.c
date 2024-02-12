@@ -149,6 +149,58 @@ found:
   return p;
 }
 
+// Look in the process table for an UNUSED proc.
+// If found, initialize state required to run in the kernel,
+// assign the thread to the index of the proc
+// and return with p->lock held.
+// If there are no free procs, or a memory allocation fails, return 0.
+static struct proc*
+allocthread(osthread* t)
+{
+  struct proc *p;
+  
+  for(int i = 0; i < NPROC; i++) {
+    acquire(&(proc + i)->lock);
+    if((proc + i)->state == UNUSED) {
+      p = proc + i;
+      if (copyout(myproc()->pagetable, (uint64)t, (char*)&i, sizeof(osthread)) == -1) {
+	panic("copyout");
+      }
+      goto found;
+    } else {
+      release(&(proc + i)->lock);
+    }
+  }
+  return 0;
+
+found:
+  p->pid = allocpid();
+  p->state = USED;
+
+  // Allocate a trapframe page.
+  if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // An empty user page table.
+  p->pagetable = proc_pagetable(p);
+  if(p->pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&p->context, 0, sizeof(p->context));
+  p->context.ra = (uint64)forkret;
+  p->context.sp = p->kstack + PGSIZE;
+
+  return p;
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -323,6 +375,88 @@ fork(void)
   release(&np->lock);
 
   return pid;
+}
+
+int osthread_create(osthread* thread, void(*func)(void), void* args) {
+  int i;
+  struct proc *np;
+  struct proc *p = myproc();
+
+  // Allocate process.
+  if((np = allocthread(thread)) == 0){
+    return -1;
+  }
+
+  // Copy user memory from parent to child.
+  if(uvmcopy_t(p->pagetable, np->pagetable, p->sz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
+  np->sz = p->sz;
+
+  // copy saved user registers.
+  *(np->trapframe) = *(p->trapframe);
+
+  // Cause fork to return 0 in the child.
+  np->trapframe->a0 = 0;
+
+  // increment reference counts on open file descriptors.
+  for(i = 0; i < NOFILE; i++)
+    if(p->ofile[i])
+      np->ofile[i] = filedup(p->ofile[i]);
+  np->cwd = idup(p->cwd);
+
+  safestrcpy(np->name, p->name, sizeof(p->name));
+
+  release(&np->lock);
+
+  acquire(&wait_lock);
+  np->parent = p;
+  release(&wait_lock);
+
+  // map the trampoline code (for system call return)
+  // at the highest user virtual address.
+  // only the supervisor uses it, on the way
+  // to/from user space, so not PTE_U.
+  uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
+  if(mappages(np->pagetable, TRAMPOLINE, PGSIZE,
+              (uint64)trampoline, PTE_R | PTE_X) < 0){
+    uvmfree(np->pagetable, 0);
+    return 0;
+  }
+
+  // map the trapframe page just below the trampoline page, for
+  // trampoline.S.
+  uvmunmap(np->pagetable, TRAPFRAME, 1, 0);
+  if(mappages(np->pagetable, TRAPFRAME, PGSIZE,
+              (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
+    uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
+    uvmfree(np->pagetable, 0);
+    return 0;
+  }
+  
+  acquire(&np->lock);
+  np->trapframe->sp = PGSIZE;  // set stack pointer to the top of the stack
+  release(&np->lock);
+
+  acquire(&np->lock);
+  np->trapframe->epc = (uint64)func;  // set pc of the thread
+  release(&np->lock);
+
+  acquire(&np->lock);
+  np->state = RUNNABLE;
+  release(&np->lock);  
+
+  /*acquire(&np->lock);
+  struct trapframe* trap = np->trapframe + 14;
+  for (int i = 0; (uint64)args[i] != '\0' && i < 9; i++) { // args must end with a NULL 
+    *trap = (uint64)args[i];
+    trap++;
+  }
+  release(&np->lock);*/
+
+  return 1;
 }
 
 // Pass p's abandoned children to init.

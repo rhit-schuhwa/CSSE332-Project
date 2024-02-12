@@ -89,3 +89,18 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_osthread_create(void) {
+  uint64 thread;
+  uint64 func;
+  uint64 arg;
+
+  argaddr(0, &thread);
+  argaddr(1, &func);
+  argaddr(2, &arg);
+
+  printf("%p\n", func);
+
+  return osthread_create((osthread*)thread, (void*)func, (void*)arg);
+}
