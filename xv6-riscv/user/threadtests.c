@@ -12,8 +12,8 @@
 #include "kernel/proc.h"
 
 void* thread_func(void* args) {
-   int* inputs = (int*)inputs;
-   printf("%d + %d = %d", inputs[0], inputs[1], inputs[0] + inputs[1]);
+   int* inputs = (int*) args;
+   printf("%d + %d = %d\n", inputs[0], inputs[1], inputs[0] + inputs[1]);
 
    exit(0);
 }
@@ -22,13 +22,15 @@ int main(int argc, char** argv) {
     osthread thread;
 
     int args[] = {1, 2};
+    char* stack = malloc(PGSIZE);
 
-    osthread_create(&thread, thread_func, args);
+    osthread_create(&thread, thread_func, &args, stack);
 
     printf("thread_func: %p\n", &thread_func);
     printf("thread num: %d\n", thread);
 
     thread_func(0);
 
+    free(stack);
     exit(0);
 }

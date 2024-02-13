@@ -377,7 +377,7 @@ fork(void)
   return pid;
 }
 
-int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
+int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* stack) {
   int i;
   struct proc *np;
   struct proc *p = myproc();
@@ -415,8 +415,6 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   np->parent = p;
   release(&wait_lock);
 
-  printf("%p\n", p->trapframe->epc);
-
   // map the trampoline code (for system call return)
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
@@ -439,14 +437,18 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   }
   
   acquire(&np->lock);
-  np->trapframe->sp = PGSIZE;  // set stack pointer to the top of the stack
+  uint64 s = p->trapframe->sp;
+  s = s >> 12;
+  s = s << 12;
+  np->trapframe->sp = (uint64)s;  // set stack pointer to the top of the stack
+  uvmunmap(np->pagetable, s, 1, 0);
+  mappages(np->pagetable, s, PGSIZE, (uint64)stack, PTE_R | PTE_W);
   release(&np->lock);
+  printf("sp: %p\n", np->trapframe->sp);
 
   acquire(&np->lock);
   np->trapframe->epc = (uint64)func;  // set pc of the thread
   release(&np->lock);
-
-  printf("pc: %p\n", np->trapframe->epc);
 
   acquire(&np->lock);
   np->trapframe->a0 = (uint64)args;  // set pc of the thread
