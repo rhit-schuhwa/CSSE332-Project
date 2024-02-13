@@ -11,20 +11,24 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
-void thread_func(void) {
-   printf("thread\n");
+void* thread_func(void* args) {
+   int* inputs = (int*)inputs;
+   printf("%d + %d = %d", inputs[0], inputs[1], inputs[0] + inputs[1]);
 
    exit(0);
 }
 
 int main(int argc, char** argv) {
-    printf("thread_func: %p\n", thread_func);
-
     osthread thread;
 
-    osthread_create(&thread, thread_func, (void*)20);
+    int args[] = {1, 2};
 
+    osthread_create(&thread, thread_func, args);
+
+    printf("thread_func: %p\n", &thread_func);
     printf("thread num: %d\n", thread);
+
+    thread_func(0);
 
     exit(0);
 }

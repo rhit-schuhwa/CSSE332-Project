@@ -100,7 +100,5 @@ sys_osthread_create(void) {
   argaddr(1, &func);
   argaddr(2, &arg);
 
-  printf("%p\n", func);
-
   return osthread_create((osthread*)thread, (void*)func, (void*)arg);
 }

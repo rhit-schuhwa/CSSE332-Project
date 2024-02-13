@@ -377,7 +377,7 @@ fork(void)
   return pid;
 }
 
-int osthread_create(osthread* thread, void(*func)(void), void* args) {
+int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   int i;
   struct proc *np;
   struct proc *p = myproc();
@@ -396,10 +396,10 @@ int osthread_create(osthread* thread, void(*func)(void), void* args) {
   np->sz = p->sz;
 
   // copy saved user registers.
-  *(np->trapframe) = *(p->trapframe);
+  //*(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
-  np->trapframe->a0 = 0;
+  //np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
@@ -415,13 +415,15 @@ int osthread_create(osthread* thread, void(*func)(void), void* args) {
   np->parent = p;
   release(&wait_lock);
 
+  printf("%p\n", p->trapframe->epc);
+
   // map the trampoline code (for system call return)
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
   // to/from user space, so not PTE_U.
   uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
   if(mappages(np->pagetable, TRAMPOLINE, PGSIZE,
-              (uint64)trampoline, PTE_R | PTE_X) < 0){
+              (uint64)kalloc(), PTE_R | PTE_X) < 0){
     uvmfree(np->pagetable, 0);
     return 0;
   }
@@ -444,9 +446,15 @@ int osthread_create(osthread* thread, void(*func)(void), void* args) {
   np->trapframe->epc = (uint64)func;  // set pc of the thread
   release(&np->lock);
 
+  printf("pc: %p\n", np->trapframe->epc);
+
+  acquire(&np->lock);
+  np->trapframe->a0 = (uint64)args;  // set pc of the thread
+  release(&np->lock);
+
   acquire(&np->lock);
   np->state = RUNNABLE;
-  release(&np->lock);  
+  release(&np->lock); 
 
   /*acquire(&np->lock);
   struct trapframe* trap = np->trapframe + 14;
