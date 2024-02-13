@@ -155,7 +155,7 @@ found:
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
 static struct proc*
-allocthread(osthread* t)
+allocthread(osthread* t, void*(*func)(void*))
 {
   struct proc *p;
   
@@ -288,7 +288,7 @@ userinit(void)
 
   p = allocproc();
   initproc = p;
-  
+
   // allocate one user page and copy initcode's instructions
   // and data into it.
   uvmfirst(p->pagetable, initcode, sizeof(initcode));
@@ -383,7 +383,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   struct proc *p = myproc();
 
   // Allocate process.
-  if((np = allocthread(thread)) == 0){
+  if((np = allocthread(thread, func)) == 0){
     return -1;
   }
 
@@ -440,19 +440,28 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   uint64 s = p->trapframe->sp;
   s = s >> 12;
   s = s << 12;
-  np->trapframe->sp = (uint64)s;  // set stack pointer to the top of the stack
   uvmunmap(np->pagetable, s, 1, 0);
-  mappages(np->pagetable, s, PGSIZE, (uint64)stack, PTE_R | PTE_W);
+  if(mappages(np->pagetable, s, PGSIZE, 
+	      (uint64)stack, PTE_R | PTE_W) < 0){
+    uvmfree(np->pagetable, 0);
+    return 0;
+  }
+  np->trapframe->sp = s + PGSIZE;  // set stack pointer to the top of the stack
+  printf("stack pointer: %p\n", s);
   release(&np->lock);
-  printf("sp: %p\n", np->trapframe->sp);
 
+  printf("sp: %p\n", np->trapframe->sp);
+  
   acquire(&np->lock);
   np->trapframe->epc = (uint64)func;  // set pc of the thread
   release(&np->lock);
 
   acquire(&np->lock);
+  printf("args proc: %p\n", args);
   np->trapframe->a0 = (uint64)args;  // set pc of the thread
   release(&np->lock);
+ 
+  printf("a0: %p\n", np->trapframe->a0);
 
   acquire(&np->lock);
   np->state = RUNNABLE;
@@ -599,6 +608,7 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
+        printf("running %d\n", p->pid);
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
