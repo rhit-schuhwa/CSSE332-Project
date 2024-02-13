@@ -155,7 +155,7 @@ found:
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
 static struct proc*
-allocthread(osthread* t, void*(*func)(void*))
+allocthread(osthread* t, void*(*func)(void*), void* stack)
 {
   struct proc *p;
   
@@ -383,7 +383,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   struct proc *p = myproc();
 
   // Allocate process.
-  if((np = allocthread(thread, func)) == 0){
+  if((np = allocthread(thread, func, stack)) == 0){
     return -1;
   }
 
@@ -396,10 +396,10 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   np->sz = p->sz;
 
   // copy saved user registers.
-  //*(np->trapframe) = *(p->trapframe);
+  *(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
-  //np->trapframe->a0 = 0;
+  np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
@@ -421,7 +421,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   // to/from user space, so not PTE_U.
   uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
   if(mappages(np->pagetable, TRAMPOLINE, PGSIZE,
-              (uint64)kalloc(), PTE_R | PTE_X) < 0){
+              (uint64)trampoline, PTE_R | PTE_X) < 0){
     uvmfree(np->pagetable, 0);
     return 0;
   }
@@ -436,44 +436,21 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
     return 0;
   }
   
-  acquire(&np->lock);
-  uint64 s = p->trapframe->sp;
-  s = s >> 12;
-  s = s << 12;
-  uvmunmap(np->pagetable, s, 1, 0);
-  if(mappages(np->pagetable, s, PGSIZE, 
-	      (uint64)stack, PTE_R | PTE_W) < 0){
-    uvmfree(np->pagetable, 0);
-    return 0;
-  }
-  np->trapframe->sp = s + PGSIZE;  // set stack pointer to the top of the stack
-  printf("stack pointer: %p\n", s);
+  acquire(&np->lock); 
+  np->trapframe->sp = (uint64)stack + PGSIZE;
   release(&np->lock);
 
-  printf("sp: %p\n", np->trapframe->sp);
-  
   acquire(&np->lock);
   np->trapframe->epc = (uint64)func;  // set pc of the thread
   release(&np->lock);
 
   acquire(&np->lock);
-  printf("args proc: %p\n", args);
-  np->trapframe->a0 = (uint64)args;  // set pc of the thread
+  np->trapframe->a0 = (uint64)args;  // set args of the thread
   release(&np->lock);
  
-  printf("a0: %p\n", np->trapframe->a0);
-
   acquire(&np->lock);
   np->state = RUNNABLE;
-  release(&np->lock); 
-
-  /*acquire(&np->lock);
-  struct trapframe* trap = np->trapframe + 14;
-  for (int i = 0; (uint64)args[i] != '\0' && i < 9; i++) { // args must end with a NULL 
-    *trap = (uint64)args[i];
-    trap++;
-  }
-  release(&np->lock);*/
+  release(&np->lock);  
 
   return 1;
 }
@@ -608,7 +585,6 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
-        printf("running %d\n", p->pid);
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
@@ -831,7 +807,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %s %s at pc=%p", p->pid, state, p->name, p->trapframe->epc);
     printf("\n");
   }
 }

@@ -93,14 +93,14 @@ sys_uptime(void)
 uint64
 sys_osthread_create(void) {
   uint64 thread;
-  uint64 func;
+  void*(*func)(void*);
   uint64 args;
   uint64 stack;
 
   argaddr(0, &thread);
-  argaddr(1, &func);
+  argaddr(1, (uint64*)&func);
   argaddr(2, &args);
   argaddr(3, &stack);
 
-  return osthread_create((osthread*)thread, (void*)func, (void*)args, (void*)stack);
+  return osthread_create((osthread*)thread, func, (void*)args, (void*)stack);
 }
