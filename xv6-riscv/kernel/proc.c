@@ -436,8 +436,8 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
     return 0;
   }
   
-  acquire(&np->lock); 
-  np->trapframe->sp = (uint64)stack + PGSIZE;
+  acquire(&np->lock);
+  np->trapframe->sp = p->trapframe->sp;
   release(&np->lock);
 
   acquire(&np->lock);

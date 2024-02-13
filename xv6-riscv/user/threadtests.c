@@ -18,7 +18,7 @@ void* thread_func(void* args) {
    exit(0);
 }
 
-int main(int argc, char** argv) {
+int testBasicArgs(void) {
     osthread thread;
 
     int args[] = {14, 43};
@@ -29,5 +29,10 @@ int main(int argc, char** argv) {
     sleep(5);
 
     free(stack);
+    exit(0);
+}
+
+int main(int argc, char** argv) {
+    testBasicArgs();
     exit(0);
 }
