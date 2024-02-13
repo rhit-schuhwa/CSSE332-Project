@@ -94,11 +94,13 @@ uint64
 sys_osthread_create(void) {
   uint64 thread;
   uint64 func;
-  uint64 arg;
+  uint64 args;
+  uint64 stack;
 
   argaddr(0, &thread);
   argaddr(1, &func);
-  argaddr(2, &arg);
+  argaddr(2, &args);
+  argaddr(3, &stack);
 
-  return osthread_create((osthread*)thread, (void*)func, (void*)arg);
+  return osthread_create((osthread*)thread, (void*)func, (void*)args, (void*)stack);
 }
