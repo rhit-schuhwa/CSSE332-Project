@@ -11,28 +11,58 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
-void* thread_func(void* args) { 
-   int* inputs = (int*)args;
-   printf("%d + %d = %d\n", inputs[0], inputs[1], inputs[0] + inputs[1]);
+int read_global_var = 15;
 
-   exit(0);
+void* thread_func_read_global_vars(void* args) { 
+    int input = *((int*)args);
+    if (input * read_global_var != 15 * 17) {
+	printf("Test Read Global Vars FAILED (input * read_global_vars = %d, expected input * read_global_vars = %d)\n", input * read_global_var, 15 * 17);
+    } else {
+	printf("Test Read Global Vars PASSED\n");
+    }
+    return 0;
 }
 
-int testBasicArgs(void) {
+int test_read_global_vars(void) {
+    osthread thread;
+
+    int args[] = {17};
+    char* stack = malloc(PGSIZE);
+
+    osthread_create(&thread, thread_func_read_global_vars, &args, stack); 
+printf("zzzz\n");
+    sleep(5);
+
+    free(stack);
+    return 0;
+}
+
+void* thread_func_basic_args(void* args) { 
+    int* inputs = (int*)args;
+    if (inputs[0] != 14 || inputs[1] != 43) {
+	printf("Test Basic Args FAILED (args = {%d, %d}, expected args = {14, 43})\n", inputs[0], inputs[1]);
+    } else {
+	printf("Test Basic Args PASSED\n");
+    }
+    return 0;
+}
+
+int test_basic_args(void) {
     osthread thread;
 
     int args[] = {14, 43};
     char* stack = malloc(PGSIZE);
 
-    osthread_create(&thread, thread_func, &args, stack); 
+    osthread_create(&thread, thread_func_basic_args, &args, stack); 
 
     sleep(5);
 
     free(stack);
-    exit(0);
+    return 0;
 }
 
 int main(int argc, char** argv) {
-    testBasicArgs();
+    test_basic_args();
+    test_read_global_vars();
     exit(0);
 }

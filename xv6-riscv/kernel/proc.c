@@ -396,7 +396,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   np->sz = p->sz;
 
   // copy saved user registers.
-  *(np->trapframe) = *(p->trapframe);
+  //*(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
