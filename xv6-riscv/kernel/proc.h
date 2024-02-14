@@ -88,6 +88,7 @@ struct list_head {
 // Per-process state
 struct proc {
   struct list_head list_t;
+
   struct spinlock lock;
 
   // p->lock must be held when using these:
@@ -109,6 +110,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  int is_main;
 };
 
 typedef int osthread;

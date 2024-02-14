@@ -11,6 +11,40 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
+void* thread_func_kill_children(void* args) { 
+    int input = *((int*)args);
+
+    sleep(10 * input);
+
+    printf("Thread %d exiting (I shouldn't be here)\n", input);
+
+    exit(0);
+}
+
+int test_kill_children(void) {
+    int num_threads = 5;
+
+    int args[5];
+    int threads[5];
+
+    char** stacks = malloc(num_threads * sizeof(char*));
+
+    for (int i = 0; i < num_threads; i++) {
+	stacks[i] = malloc(PGSIZE);
+	args[i] = i + 1;
+	osthread_create(&threads[i], thread_func_kill_children, &args[i], stacks[i]);
+    } 
+
+    printf("Test Kill Children PASSED\n");
+
+    for (int i = 0; i < num_threads; i++) {
+	free(stacks[i]);
+    }
+    free(stacks);
+    
+    return 0;
+}
+
 int write_global_var = 0;
 
 void* thread_func_write_global_vars(void* args) { 
@@ -108,7 +142,7 @@ int test_basic_args(void) {
 }
 
 void* thread_func_join(void* args) {
-    sleep(50);
+    sleep(10);
     printf("Exiting thread for Test Join\n");
     exit(0);
 }
@@ -133,5 +167,7 @@ int main(int argc, char** argv) {
     test_basic_args();
     test_read_global_vars();
     test_write_global_vars();
+
+    test_kill_children(); // THIS HAS TO GO LAST PLEASE DO NOT TOUCH!!!!!
     exit(0);
 }

@@ -399,6 +399,14 @@ fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+  init_list_head(&np->list_t);
+  release(&np->lock);
+
+  acquire(&np->lock);
+  np->is_main = 1;
+  release(&np->lock);
+
+  acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
 
@@ -477,6 +485,15 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   release(&np->lock); 
  
   acquire(&np->lock);
+  init_list_head(&np->list_t);
+  list_add_tail(&np->parent->list_t, &np->list_t);
+  release(&np->lock);
+
+  acquire(&np->lock);
+  np->is_main = 0;
+  release(&np->lock);
+  
+  acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);  
 
@@ -524,6 +541,17 @@ exit(int status)
   p->cwd = 0;
 
   acquire(&wait_lock);
+
+  if (p->is_main) {
+    struct proc *pp;
+    while (p->list_t.next != &p->list_t) {
+	pp = (struct proc *)p->list_t.next;
+	list_del(&pp->list_t);
+	kill(pp->pid);
+    }
+  } else {
+    list_del(&p->list_t);
+  }
 
   // Give any children to init.
   reparent(p);
