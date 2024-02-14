@@ -564,6 +564,51 @@ wait(uint64 addr)
   }
 }
 
+int
+osthread_join(osthread thread, uint64 addr)
+{
+  struct proc *pp;
+  int havekid;
+  struct proc *p = myproc();
+
+  acquire(&wait_lock);
+
+  for(;;){
+    // Scan through table looking for exited children.
+    havekid = 0;
+      pp = &proc[thread];
+      if(pp->parent == p){
+        // make sure the child isn't still in exit() or swtch().
+        acquire(&pp->lock);
+
+        havekid = 1;
+        if(pp->state == ZOMBIE){
+          // Found one.
+          if(addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
+                                  sizeof(pp->xstate)) < 0) {
+            release(&pp->lock);
+            release(&wait_lock);
+            return -1;
+          }
+          freeproc(pp);
+          release(&pp->lock);
+          release(&wait_lock);
+          return 1;
+        }
+        release(&pp->lock);
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekid || killed(p)){
+      release(&wait_lock);
+      return -1;
+    }
+    
+    // Wait for a child to exit.
+    sleep(p, &wait_lock);  //DOC: wait-sleep
+  }
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
