@@ -590,7 +590,7 @@ osthread_join(osthread thread, uint64 addr)
             release(&wait_lock);
             return -1;
           }
-          freeproc(pp);
+          //freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
           return 1;
