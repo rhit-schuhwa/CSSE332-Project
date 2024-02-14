@@ -333,7 +333,6 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return -1;
 }
 
-// TODO 
 int
 uvmcopy_t(pagetable_t old, pagetable_t new, uint64 sz)
 {
