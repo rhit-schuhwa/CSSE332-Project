@@ -104,3 +104,14 @@ sys_osthread_create(void) {
 
   return osthread_create((osthread*)thread, func, (void*)args, (void*)stack);
 }
+
+uint64
+sys_osthread_join(void) {
+  uint64 thread;
+  uint64 addr;
+
+  argaddr(0, &thread);
+  argaddr(1, &addr);
+
+  return osthread_join((osthread)thread, addr);
+}

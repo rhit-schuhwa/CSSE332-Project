@@ -23,6 +23,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int osthread_create(int*, void*(*)(void*), void*, void*);
+int osthread_join(int, uint64);
 
 // ulib.c
 int stat(const char*, struct stat*);
