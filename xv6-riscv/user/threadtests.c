@@ -11,6 +11,44 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
+int write_global_var = 0;
+
+void* thread_func_write_global_vars(void* args) { 
+    write_global_var += *((int*)args);
+    
+    exit(0);
+}
+
+int test_write_global_vars(void) {
+    osthread thread;
+
+    int num_threads = 5;
+
+    int args[] = {2};
+
+    char** stacks = malloc(num_threads * sizeof(char*));
+
+    for (int i = 0; i < num_threads; i++) {
+	stacks[i] = malloc(PGSIZE);
+	osthread_create(&thread, thread_func_write_global_vars, &args, stacks[i]);
+    }
+
+    sleep(5);
+
+    if (write_global_var != 2 * num_threads) {
+	printf("Test Write Global Vars FAILED (write_gloal_var = %d, expected write_global_vars = %d)\n", write_global_var, 2 * num_threads);
+    } else {
+	printf("Test Write Global Vars PASSED\n");
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+	free(stacks[i]);
+    }
+    free(stacks);
+    
+    return 0;
+}
+
 int read_global_var = 15;
 
 void* thread_func_read_global_vars(void* args) { 
@@ -20,7 +58,7 @@ void* thread_func_read_global_vars(void* args) {
     } else {
 	printf("Test Read Global Vars PASSED\n");
     }
-    return 0;
+    exit(0);
 }
 
 int test_read_global_vars(void) {
@@ -30,7 +68,7 @@ int test_read_global_vars(void) {
     char* stack = malloc(PGSIZE);
 
     osthread_create(&thread, thread_func_read_global_vars, &args, stack); 
-printf("zzzz\n");
+
     sleep(5);
 
     free(stack);
@@ -44,7 +82,7 @@ void* thread_func_basic_args(void* args) {
     } else {
 	printf("Test Basic Args PASSED\n");
     }
-    return 0;
+    exit(0);
 }
 
 int test_basic_args(void) {
@@ -64,5 +102,6 @@ int test_basic_args(void) {
 int main(int argc, char** argv) {
     test_basic_args();
     test_read_global_vars();
+    test_write_global_vars();
     exit(0);
 }

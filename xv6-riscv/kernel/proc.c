@@ -446,7 +446,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
 
   acquire(&np->lock);
   np->trapframe->a0 = (uint64)args;  // set args of the thread
-  release(&np->lock);
+  release(&np->lock); 
  
   acquire(&np->lock);
   np->state = RUNNABLE;
