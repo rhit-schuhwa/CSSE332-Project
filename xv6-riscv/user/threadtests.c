@@ -14,26 +14,34 @@
 int write_global_var = 0;
 
 void* thread_func_write_global_vars(void* args) { 
-    write_global_var += *((int*)args);
-    
+    int* inputs = (int*)args;
+    write_global_var += inputs[0];
+
+    sleep(5 * inputs[1]);
+
+    printf("Write Global Var thread %d exiting\n", inputs[1]);
+
     exit(0);
 }
 
 int test_write_global_vars(void) {
-    osthread thread;
-
     int num_threads = 5;
 
-    int args[] = {2};
+    int args[10];
+    int threads[5];
 
     char** stacks = malloc(num_threads * sizeof(char*));
 
     for (int i = 0; i < num_threads; i++) {
 	stacks[i] = malloc(PGSIZE);
-	osthread_create(&thread, thread_func_write_global_vars, &args, stacks[i]);
+	args[2 * i] = 2;
+	args[2 * i + 1] = i;
+	osthread_create(&threads[i], thread_func_write_global_vars, args + 2 * i, stacks[i]);
     }
 
-    osthread_join(thread, 0);
+    for (int i = 0; i < num_threads; i++) {
+	osthread_join(threads[i], 0);
+    }
 
     if (write_global_var != 2 * num_threads) {
 	printf("Test Write Global Vars FAILED (write_gloal_var = %d, expected write_global_vars = %d)\n", write_global_var, 2 * num_threads);
