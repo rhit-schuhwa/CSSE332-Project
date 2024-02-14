@@ -22,7 +22,7 @@ int test_join(void) {
 
     char* stack = malloc(PGSIZE);
 
-    osthread_create(&thread, thread_func_basic_args, 0, stack); 
+    osthread_create(&thread, thread_func_join, 0, stack); 
 
     osthread_join(thread, 0);
     
