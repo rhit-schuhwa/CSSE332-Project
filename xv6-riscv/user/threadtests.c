@@ -11,27 +11,6 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
-void* thread_func_join(void* args) {
-    sleep(5);
-    printf("Exiting thread for Test Join\n");
-    exit(0);
-}
-
-int test_join(void) {
-    osthread thread;
-
-    char* stack = malloc(PGSIZE);
-
-    osthread_create(&thread, thread_func_join, 0, stack); 
-
-    osthread_join(thread, 0);
-    
-    printf("Exiting Test Join\n");
-
-    free(stack);
-    return 0;
-}
-
 int write_global_var = 0;
 
 void* thread_func_write_global_vars(void* args) { 
@@ -54,7 +33,7 @@ int test_write_global_vars(void) {
 	osthread_create(&thread, thread_func_write_global_vars, &args, stacks[i]);
     }
 
-    sleep(5);
+    osthread_join(thread, 0);
 
     if (write_global_var != 2 * num_threads) {
 	printf("Test Write Global Vars FAILED (write_gloal_var = %d, expected write_global_vars = %d)\n", write_global_var, 2 * num_threads);
@@ -90,7 +69,7 @@ int test_read_global_vars(void) {
 
     osthread_create(&thread, thread_func_read_global_vars, &args, stack); 
 
-    sleep(5);
+    osthread_join(thread, 0);
 
     free(stack);
     return 0;
@@ -114,16 +93,37 @@ int test_basic_args(void) {
 
     osthread_create(&thread, thread_func_basic_args, &args, stack); 
 
-    sleep(5);
+    osthread_join(thread, 0);
+
+    free(stack);
+    return 0;
+}
+
+void* thread_func_join(void* args) {
+    sleep(50);
+    printf("Exiting thread for Test Join\n");
+    exit(0);
+}
+
+int test_join(void) {
+    osthread thread;
+
+    char* stack = malloc(PGSIZE);
+
+    osthread_create(&thread, thread_func_join, 0, stack); 
+
+    osthread_join(thread, 0);
+    
+    printf("Exiting Test Join\n");
 
     free(stack);
     return 0;
 }
 
 int main(int argc, char** argv) {
+    test_join();
     test_basic_args();
     test_read_global_vars();
     test_write_global_vars();
-    test_join();
     exit(0);
 }
