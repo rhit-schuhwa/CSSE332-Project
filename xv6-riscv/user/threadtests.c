@@ -22,26 +22,32 @@ void* thread_func_kill_children(void* args) {
 }
 
 int test_kill_children(void) {
-    int num_threads = 5;
 
-    int args[5];
-    int threads[5];
+    int pid = fork();
+    if (pid == 0) {
+	int num_threads = 5;
 
-    char** stacks = malloc(num_threads * sizeof(char*));
+	int args[5];
+	int threads[5];
 
-    for (int i = 0; i < num_threads; i++) {
-	stacks[i] = malloc(PGSIZE);
-	args[i] = i + 1;
-	osthread_create(&threads[i], thread_func_kill_children, &args[i], stacks[i]);
-    } 
+	char** stacks = malloc(num_threads * sizeof(char*));
 
-    printf("Test Kill Children PASSED\n");
+	for (int i = 0; i < num_threads; i++) {
+	    stacks[i] = malloc(PGSIZE);
+	    args[i] = i + 1;
+	    osthread_create(&threads[i], thread_func_kill_children, &args[i], stacks[i]);
+	} 
 
-    for (int i = 0; i < num_threads; i++) {
-	free(stacks[i]);
+	printf("Test Kill Children PASSED\n");
+
+	for (int i = 0; i < num_threads; i++) {
+	    free(stacks[i]);
+	}
+	free(stacks);
+    } else {
+	wait(0);
     }
-    free(stacks);
-    
+
     return 0;
 }
 
@@ -75,6 +81,7 @@ int test_write_global_vars(void) {
 
     for (int i = 0; i < num_threads; i++) {
 	osthread_join(threads[i], 0);
+	printf("Done waiting for thread %d\n", i);
     }
 
     if (write_global_var != 2 * num_threads) {
@@ -87,7 +94,7 @@ int test_write_global_vars(void) {
 	free(stacks[i]);
     }
     free(stacks);
-    
+
     return 0;
 }
 
@@ -155,7 +162,7 @@ int test_join(void) {
     osthread_create(&thread, thread_func_join, 0, stack); 
 
     osthread_join(thread, 0);
-    
+
     printf("Exiting Test Join\n");
 
     free(stack);
@@ -167,7 +174,6 @@ int main(int argc, char** argv) {
     test_basic_args();
     test_read_global_vars();
     test_write_global_vars();
-
-    test_kill_children(); // THIS HAS TO GO LAST PLEASE DO NOT TOUCH!!!!!
+    test_kill_children();
     exit(0);
 }
