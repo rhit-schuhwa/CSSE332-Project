@@ -11,6 +11,27 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
+void* thread_func_join(void* args) {
+    sleep(5);
+    printf("Exiting thread for Test Join\n");
+    exit(0);
+}
+
+int test_join(void) {
+    osthread thread;
+
+    char* stack = malloc(PGSIZE);
+
+    osthread_create(&thread, thread_func_basic_args, 0, stack); 
+
+    osthread_join(thread, 0);
+    
+    printf("Exiting Test Join\n");
+
+    free(stack);
+    return 0;
+}
+
 int write_global_var = 0;
 
 void* thread_func_write_global_vars(void* args) { 
@@ -103,5 +124,6 @@ int main(int argc, char** argv) {
     test_basic_args();
     test_read_global_vars();
     test_write_global_vars();
+    test_join();
     exit(0);
 }
