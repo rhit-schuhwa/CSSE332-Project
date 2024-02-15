@@ -259,7 +259,7 @@ uvmalloc_t(struct proc* p, uint64 oldsz, uint64 newsz, int xperm)
   char *mem;
   uint64 a;
   struct proc* pp;
-  struct list_head* iterator; 
+  struct list_head* iterator;
 
   if(newsz < oldsz)
     return oldsz;
@@ -280,7 +280,6 @@ uvmalloc_t(struct proc* p, uint64 oldsz, uint64 newsz, int xperm)
 	uvmdealloc(pp->pagetable, a, oldsz);
 	return 0;
       }
-      //printf("Allocating more memory for pid %d\n", pp->pid);
     } while ((iterator = iterator->next) != &p->list_t);
   }
   return newsz;

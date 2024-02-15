@@ -14,14 +14,14 @@
 void* thread_func_sbrk(void* args) { 
     int input = *((int*)args);
 
-    sleep(2 * (input + 1));
-    
+    sleep(5 * (input + 1));
+
     exit(0);
 }
 
 int test_sbrk(void) {
     int num_threads = 5;
-    
+
     int args[5];
     int threads[5];
 
@@ -36,7 +36,7 @@ int test_sbrk(void) {
     sbrk(PGSIZE);
 
     for (int i = 0; i < num_threads; i++) {
-      osthread_join(threads[i], 0);
+	osthread_join(threads[i], 0);
     }
 
     sleep(5);
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
     test_read_global_vars();
     test_write_global_vars();
     test_kill_children();
-    //test_sbrk();
+    test_sbrk();
     printf("Tests Complete\n");
     exit(0);
 }

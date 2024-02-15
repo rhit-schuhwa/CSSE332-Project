@@ -345,12 +345,6 @@ growproc(int n)
   struct proc* pp;
   struct list_head* iterator;
 
-  iterator = &p->list_t;
-  while ((iterator = iterator->next) != &p->list_t) {
-    pp = (struct proc *)iterator;
-    acquire(&pp->lock);
-  }
-
   sz = p->sz;
   if(n > 0){
     if((sz = uvmalloc_t(p, sz, sz + n, PTE_W)) == 0) {
@@ -365,7 +359,7 @@ growproc(int n)
   while ((iterator = iterator->next) != &p->list_t) {
     pp = (struct proc *)iterator;
     pp->sz = sz;
-    release(&pp->lock);
+    //release(&pp->lock);
   }
 
   return 0;
@@ -452,7 +446,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   //*(np->trapframe) = *(p->trapframe);
 
   // Cause fork to return 0 in the child.
-  np->trapframe->a0 = 0;
+  //np->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
