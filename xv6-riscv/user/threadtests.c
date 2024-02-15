@@ -11,12 +11,52 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
+void* thread_func_sbrk(void* args) { 
+    int input = *((int*)args);
+
+    sleep(2 * (input + 1));
+    
+    exit(0);
+}
+
+int test_sbrk(void) {
+    int num_threads = 5;
+    
+    int args[5];
+    int threads[5];
+
+    char** stacks = malloc(num_threads * sizeof(char*));
+
+    for (int i = 0; i < num_threads; i++) {
+	stacks[i] = malloc(PGSIZE);
+	args[i] = i;
+	osthread_create(&threads[i], thread_func_sbrk, &args[i], stacks[i]);
+    }
+
+    sbrk(PGSIZE);
+
+    for (int i = 0; i < num_threads; i++) {
+      osthread_join(threads[i], 0);
+    }
+
+    sleep(5);
+
+    printf("Test sbrk PASSED\n");
+
+    for (int i = 0; i < num_threads; i++) {
+	free(stacks[i]);
+    }
+    free(stacks);
+
+    return 0;
+}
+
 void* thread_func_kill_children(void* args) { 
     int input = *((int*)args);
 
-    sleep(10 * input);
+    sleep(10 * (input + 1));
 
-    printf("Thread %d exiting (I shouldn't be here)\n", input);
+    printf("Thread %d exiting (Test FAILED)\n", input);
 
     exit(0);
 }
@@ -34,7 +74,7 @@ int test_kill_children(void) {
 
 	for (int i = 0; i < num_threads; i++) {
 	    stacks[i] = malloc(PGSIZE);
-	    args[i] = i + 1;
+	    args[i] = i;
 	    osthread_create(&threads[i], thread_func_kill_children, &args[i], stacks[i]);
 	} 
 
@@ -44,6 +84,7 @@ int test_kill_children(void) {
 	    free(stacks[i]);
 	}
 	free(stacks);
+	exit(0);
     } else {
 	wait(0);
     }
@@ -175,5 +216,7 @@ int main(int argc, char** argv) {
     test_read_global_vars();
     test_write_global_vars();
     test_kill_children();
+    //test_sbrk();
+    printf("Tests Complete\n");
     exit(0);
 }

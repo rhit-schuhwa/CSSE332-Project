@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -248,6 +250,43 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
   return newsz;
 }
 
+// Allocate PTEs and physical memory to grow process from oldsz to
+// newsz, which need not be page aligned.  Returns new size or 0 on error.
+uint64
+uvmalloc_t(struct proc* p, uint64 oldsz, uint64 newsz, int xperm)
+{
+  //printf("doing the malloc\n");
+  char *mem;
+  uint64 a;
+  struct proc* pp;
+  struct list_head* iterator; 
+
+  if(newsz < oldsz)
+    return oldsz;
+
+  oldsz = PGROUNDUP(oldsz);
+  for(a = oldsz; a < newsz; a += PGSIZE){
+    mem = kalloc();
+    if(mem == 0){
+      uvmdealloc(p->pagetable, a, oldsz);
+      return 0;
+    }
+    memset(mem, 0, PGSIZE);
+    iterator = &p->list_t;
+    do {
+      pp = (struct proc *)iterator;
+      if(mappages(pp->pagetable, a, PGSIZE, (uint64)mem, PTE_R|PTE_U|xperm) != 0){
+	kfree(mem);
+	uvmdealloc(pp->pagetable, a, oldsz);
+	return 0;
+      }
+      //printf("Allocating more memory for pid %d\n", pp->pid);
+    } while ((iterator = iterator->next) != &p->list_t);
+  }
+  return newsz;
+}
+
+
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
@@ -342,9 +381,9 @@ uvmcopy_t(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
+      panic("uvmcopy_t: pte should exist");
     if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      panic("uvmcopy_t: page not present");
 
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);

@@ -17,6 +17,7 @@ struct spinlock pid_lock;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
+static void freethread(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
@@ -179,7 +180,7 @@ found:
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
-    freeproc(p);
+    freethread(p);
     release(&p->lock);
     return 0;
   }
@@ -187,7 +188,7 @@ found:
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
-    freeproc(p);
+    freethread(p);
     release(&p->lock);
     return 0;
   }
@@ -341,16 +342,32 @@ growproc(int n)
 {
   uint64 sz;
   struct proc *p = myproc();
+  struct proc* pp;
+  struct list_head* iterator;
+
+  iterator = &p->list_t;
+  while ((iterator = iterator->next) != &p->list_t) {
+    pp = (struct proc *)iterator;
+    acquire(&pp->lock);
+  }
 
   sz = p->sz;
   if(n > 0){
-    if((sz = uvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
+    if((sz = uvmalloc_t(p, sz, sz + n, PTE_W)) == 0) {
       return -1;
     }
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  
+  iterator = &p->list_t;
+  while ((iterator = iterator->next) != &p->list_t) {
+    pp = (struct proc *)iterator;
+    pp->sz = sz;
+    release(&pp->lock);
+  }
+
   return 0;
 }
 
@@ -425,7 +442,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
 
   // Copy user memory from parent to child.
   if(uvmcopy_t(p->pagetable, np->pagetable, p->sz) < 0){
-    freeproc(np);
+    freethread(np);
     release(&np->lock);
     return -1;
   }
