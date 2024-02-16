@@ -462,7 +462,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   np->parent = p;
   release(&wait_lock);
 
-  // map the trampoline code (for system call return)
+  /*// map the trampoline code (for system call return)
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
   // to/from user space, so not PTE_U.
@@ -481,7 +481,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
     uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
     uvmfree(np->pagetable, 0);
     return 0;
-  }
+  }*/
   
   acquire(&np->lock);
   np->trapframe->sp = p->trapframe->sp;
