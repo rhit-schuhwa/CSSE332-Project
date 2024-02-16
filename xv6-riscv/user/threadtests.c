@@ -1,15 +1,61 @@
-#include "kernel/param.h"
-#include "kernel/types.h"
-#include "kernel/stat.h"
-#include "user/user.h"
-#include "kernel/fs.h"
-#include "kernel/fcntl.h"
-#include "kernel/syscall.h"
-#include "kernel/memlayout.h"
-#include "kernel/riscv.h"
+#include "osthread.h"
 
-#include "kernel/spinlock.h"
-#include "kernel/proc.h"
+int* shared_memory;
+int* heap_memory;
+
+void* test_checking_memory_thread(void* args) {
+    int input = *((int*)args);
+    sleep(5 * (input + 1));
+
+    // Test 1: Reading and writing to the same memory locations
+    shared_memory[input] = input;
+    if (shared_memory[input] != input)
+        printf("Test Failed Shared\n");
+
+    // Test 2: Allocate more space on the heap using sbrk
+    if (input == 0) {
+        heap_memory = (int*)sbrk(PGSIZE);
+    }
+
+    // Test 3: Test putting values in this memory and then reading from other threads
+    heap_memory[input] = input;
+    if (heap_memory[input] != input)
+        printf("Test Failed Heap\n");
+
+    exit(0);
+}
+
+int test_checking_memory(void) {
+    int num_threads = 2;
+    int args[2];
+    int threads[2];
+
+    shared_memory = malloc(num_threads * sizeof(int));
+
+    for (int i = 0; i < num_threads; i++) {
+        args[i] = i;
+        osthread_create(&threads[i], test_checking_memory_thread, &args[i]);
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        osthread_join(threads[i], 0);
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        if (shared_memory[i] != i){
+            printf("Test Failed Shared\n");
+            return 0;
+        }
+        if (heap_memory[i] != i) {
+            printf("Test Failed Heap\n");
+            return 0;
+        }
+    }
+
+    printf("Test Checking memory PASSED\n");
+    return 0;
+}
+
 
 int** global_stack_addresses;
 
@@ -164,7 +210,7 @@ void* thread_func_write_global_vars(void* args) {
 
     sleep(5 * inputs[1]);
 
-    printf("Write Global Var thread %d exiting\n", inputs[1]);
+    // printf("Write Global Var thread %d exiting\n", inputs[1]);
 
     exit(0);
 }
@@ -183,7 +229,7 @@ int test_write_global_vars(void) {
 
     for (int i = 0; i < num_threads; i++) {
 	osthread_join(threads[i], 0);
-	printf("Done waiting for thread %d\n", i);
+	// printf("Done waiting for thread %d\n", i);
     }
 
     if (write_global_var != 2 * num_threads) {
@@ -249,9 +295,11 @@ int test_basic_args(void) {
     return 0;
 }
 
+int join_global = 0;
+
 void* thread_func_join(void* args) {
     sleep(10);
-    printf("Exiting thread for Test Join\n");
+    join_global = 1;
     exit(0);
 }
 
@@ -262,7 +310,10 @@ int test_join(void) {
 
     osthread_join(thread, 0);
 
-    printf("Exiting Test Join\n");
+    if (join_global != 1){
+        printf("Test Join FAILED\n");
+    }
+    printf("Test Join PASSED\n");
 
     return 0;
 }
@@ -276,6 +327,7 @@ int main(int argc, char** argv) {
     test_sbrk();
     test_sbrk_thread();
     test_check_stack();
+    test_checking_memory();
     printf("Tests Complete\n");
     exit(0);
 }
