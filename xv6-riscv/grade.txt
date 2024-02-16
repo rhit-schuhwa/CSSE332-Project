@@ -1,1 +1,6 @@
-Grade:
+We believe that we have deserve an A on this project.
+We implemented all of the required functionality on this project and created
+a strong set of tests to test all of the implemented functionalities.
+Our implementation allowed for easy use of our threads and made use of
+functions built into xv6 in order to reduce complexity.
+We also allowed for an unlimited number of input arguments.
