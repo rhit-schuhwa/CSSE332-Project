@@ -519,7 +519,7 @@ reparent(struct proc *p)
   struct proc *pp;
 
   for(pp = proc; pp < &proc[NPROC]; pp++){
-    if(pp->parent == p){
+    if(pp->parent == p && pp->is_main){
       pp->parent = initproc;
       wakeup(initproc);
     }
@@ -559,7 +559,7 @@ exit(int status)
 	pp = (struct proc *)p->list_t.next;
 	list_del(&pp->list_t);
 	kill(pp->pid);
-    }
+    } 
   } else {
     list_del(&p->list_t);
   }

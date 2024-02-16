@@ -255,7 +255,6 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
 uint64
 uvmalloc_t(struct proc* p, uint64 oldsz, uint64 newsz, int xperm)
 {
-  //printf("doing the malloc\n");
   char *mem;
   uint64 a;
   struct proc* pp;
