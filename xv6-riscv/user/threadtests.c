@@ -20,7 +20,6 @@ void* thread_func_check_stack(void* args) {
 
     // Allocate a variable on the stack and store its address in a global array
     int stack_var = input;
-    printf("%d\n", stack_var);
     global_stack_addresses[input] = &stack_var;
 
     exit(0);
@@ -77,8 +76,6 @@ int test_sbrk_thread(void) {
     int args[5];
     int threads[5];
 
-
-
     for (int i = 0; i < num_threads; i++) {
 	args[i] = i;
 	osthread_create(&threads[i], thread_func_sbrk_thread, &args[i]);
@@ -89,7 +86,6 @@ int test_sbrk_thread(void) {
     }
 
     printf("Test sbrk Thread PASSED\n");
-
 
     return 0;
 }
@@ -179,7 +175,6 @@ int test_write_global_vars(void) {
     int args[10];
     int threads[5];
 
-
     for (int i = 0; i < num_threads; i++) {
 	args[2 * i] = 2;
 	args[2 * i + 1] = i;
@@ -196,7 +191,6 @@ int test_write_global_vars(void) {
     } else {
 	printf("Test Write Global Vars PASSED\n");
     }
-
 
     return 0;
 }
@@ -227,18 +221,26 @@ int test_read_global_vars(void) {
 
 void* thread_func_basic_args(void* args) { 
     int* inputs = (int*)args;
-    if (inputs[0] != 14 || inputs[1] != 43) {
-	printf("Test Basic Args FAILED (args = {%d, %d}, expected args = {14, 43})\n", inputs[0], inputs[1]);
-    } else {
-	printf("Test Basic Args PASSED\n");
+    
+    for (int i = 0; i < 100; i++) {
+      if (inputs[i] != i) {
+        printf("Test Basic Args FAILED (expected args[%d] = %d, actual args[%d] = %d)\n", i, i, i, inputs[i]);
+	exit(0);
+      }
     }
+
+    printf("Test Basic Args PASSED\n");
+
     exit(0);
 }
 
 int test_basic_args(void) {
     osthread thread;
 
-    int args[] = {14, 43};
+    int args[100];
+    for (int i = 0; i < 100; i++) {
+      args[i] = i;
+    }
 
     osthread_create(&thread, thread_func_basic_args, &args); 
 
