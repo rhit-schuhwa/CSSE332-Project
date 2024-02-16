@@ -475,9 +475,8 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
 
   
   acquire(&np->lock);
-  uint64 stack2 = p->sz;
   growproc(PGSIZE);
-  np->trapframe->sp = stack2 + PGSIZE;
+  np->trapframe->sp = np->sz;
   release(&np->lock);
 
   acquire(&np->lock);
