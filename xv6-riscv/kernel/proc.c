@@ -442,12 +442,6 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   }
   np->sz = p->sz;
 
-  // copy saved user registers.
-  //*(np->trapframe) = *(p->trapframe);
-
-  // Cause fork to return 0 in the child.
-  //np->trapframe->a0 = 0;
-
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
@@ -460,28 +454,7 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
 
   acquire(&wait_lock);
   np->parent = p;
-  release(&wait_lock);
-
-  /*// map the trampoline code (for system call return)
-  // at the highest user virtual address.
-  // only the supervisor uses it, on the way
-  // to/from user space, so not PTE_U.
-  uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
-  if(mappages(np->pagetable, TRAMPOLINE, PGSIZE,
-              (uint64)trampoline, PTE_R | PTE_X) < 0){
-    uvmfree(np->pagetable, 0);
-    return 0;
-  }
-
-  // map the trapframe page just below the trampoline page, for
-  // trampoline.S.
-  uvmunmap(np->pagetable, TRAPFRAME, 1, 0);
-  if(mappages(np->pagetable, TRAPFRAME, PGSIZE,
-              (uint64)(np->trapframe), PTE_R | PTE_W) < 0){
-    uvmunmap(np->pagetable, TRAMPOLINE, 1, 0);
-    uvmfree(np->pagetable, 0);
-    return 0;
-  }*/
+  release(&wait_lock); 
   
   // acquire(&np->lock);
   // np->trapframe->sp = p->trapframe->sp;
@@ -526,7 +499,7 @@ reparent(struct proc *p)
   struct proc *pp;
 
   for(pp = proc; pp < &proc[NPROC]; pp++){
-    if(pp->parent == p && pp->is_main){
+    if(pp->parent == p){
       pp->parent = initproc;
       wakeup(initproc);
     }
@@ -565,7 +538,7 @@ exit(int status)
     while (p->list_t.next != &p->list_t) {
 	pp = (struct proc *)p->list_t.next;
 	list_del(&pp->list_t);
-	kill(pp->pid);
+	freethread(pp);
     } 
   } else {
     list_del(&p->list_t);
