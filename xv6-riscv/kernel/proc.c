@@ -156,10 +156,10 @@ found:
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
 static struct proc*
-allocthread(osthread* t, void*(*func)(void*), void* stack)
+allocthread(osthread* t, void*(*func)(void*))
 {
   struct proc *p;
-  
+
   for(int i = 0; i < NPROC; i++) {
     acquire(&(proc + i)->lock);
     if((proc + i)->state == UNUSED) {
@@ -424,13 +424,13 @@ fork(void)
   return pid;
 }
 
-int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* stack) {
+int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   int i;
   struct proc *np;
   struct proc *p = myproc();
 
   // Allocate process.
-  if((np = allocthread(thread, func, stack)) == 0){
+  if((np = allocthread(thread, func)) == 0){
     return -1;
   }
 
@@ -483,9 +483,9 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
     return 0;
   }*/
   
-  acquire(&np->lock);
-  np->trapframe->sp = p->trapframe->sp;
-  release(&np->lock);
+  // acquire(&np->lock);
+  // np->trapframe->sp = p->trapframe->sp;
+  // release(&np->lock);
 
   acquire(&np->lock);
   np->trapframe->epc = (uint64)func;  // set pc of the thread
@@ -498,6 +498,13 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args, void* sta
   acquire(&np->lock);
   init_list_head(&np->list_t);
   list_add_tail(&np->parent->list_t, &np->list_t);
+  release(&np->lock);
+
+  
+  acquire(&np->lock);
+  uint64 stack2 = p->sz;
+  growproc(PGSIZE);
+  np->trapframe->sp = stack2 + PGSIZE;
   release(&np->lock);
 
   acquire(&np->lock);

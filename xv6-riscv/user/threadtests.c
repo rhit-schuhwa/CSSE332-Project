@@ -11,6 +11,56 @@
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
 
+int** global_stack_addresses;
+
+void* thread_func_check_stack(void* args) {
+    int input = *((int*)args);
+    if (input != 4)
+        sleep(5 * (input + 1));
+
+    // Allocate a variable on the stack and store its address in a global array
+    int stack_var = input;
+    printf("%d\n", stack_var);
+    global_stack_addresses[input] = &stack_var;
+
+    exit(0);
+}
+
+int test_check_stack(void) {
+    int num_threads = 5;
+    int args[5];
+    int threads[5];
+
+    global_stack_addresses = malloc(num_threads * sizeof(int*));
+
+    for (int i = 0; i < num_threads; i++) {
+
+        args[i] = i;
+        osthread_create(&threads[i], thread_func_check_stack, &args[i]);
+    }
+
+    for (int i = 0; i < num_threads; i++) {
+        osthread_join(threads[i], 0);
+    }
+
+    // Check if all threads have different stack addresses
+    for (int i = 0; i < num_threads; i++) {
+        for (int j = i + 1; j < num_threads; j++) {
+            if (global_stack_addresses[i] == global_stack_addresses[j]){
+                 printf("Test Check Stack FAILED\n");
+                 return 0;
+            }
+        }
+    }
+
+    printf("Test Check Stack PASSED\n");
+
+    free(global_stack_addresses);
+
+    return 0;
+}
+
+
 void* thread_func_sbrk_thread(void* args) { 
     int input = *((int*)args);
 
@@ -27,12 +77,11 @@ int test_sbrk_thread(void) {
     int args[5];
     int threads[5];
 
-    char** stacks = malloc(num_threads * sizeof(char*));
+
 
     for (int i = 0; i < num_threads; i++) {
-	stacks[i] = malloc(PGSIZE);
 	args[i] = i;
-	osthread_create(&threads[i], thread_func_sbrk_thread, &args[i], stacks[i]);
+	osthread_create(&threads[i], thread_func_sbrk_thread, &args[i]);
     }
 
     for (int i = 0; i < num_threads; i++) {
@@ -41,10 +90,6 @@ int test_sbrk_thread(void) {
 
     printf("Test sbrk Thread PASSED\n");
 
-    for (int i = 0; i < num_threads; i++) {
-	free(stacks[i]);
-    }
-    free(stacks);
 
     return 0;
 }
@@ -63,12 +108,10 @@ int test_sbrk(void) {
     int args[5];
     int threads[5];
 
-    char** stacks = malloc(num_threads * sizeof(char*));
 
     for (int i = 0; i < num_threads; i++) {
-	stacks[i] = malloc(PGSIZE);
 	args[i] = i;
-	osthread_create(&threads[i], thread_func_sbrk, &args[i], stacks[i]);
+	osthread_create(&threads[i], thread_func_sbrk, &args[i]);
     }
 
     sbrk(PGSIZE);
@@ -78,11 +121,6 @@ int test_sbrk(void) {
     }
 
     printf("Test sbrk PASSED\n");
-
-    for (int i = 0; i < num_threads; i++) {
-	free(stacks[i]);
-    }
-    free(stacks);
 
     return 0;
 }
@@ -106,20 +144,14 @@ int test_kill_children(void) {
 	int args[5];
 	int threads[5];
 
-	char** stacks = malloc(num_threads * sizeof(char*));
 
 	for (int i = 0; i < num_threads; i++) {
-	    stacks[i] = malloc(PGSIZE);
 	    args[i] = i;
-	    osthread_create(&threads[i], thread_func_kill_children, &args[i], stacks[i]);
+	    osthread_create(&threads[i], thread_func_kill_children, &args[i]);
 	} 
 
 	printf("Test Kill Children PASSED\n");
 
-	for (int i = 0; i < num_threads; i++) {
-	    free(stacks[i]);
-	}
-	free(stacks);
 	exit(0);
     } else {
 	wait(0);
@@ -147,13 +179,11 @@ int test_write_global_vars(void) {
     int args[10];
     int threads[5];
 
-    char** stacks = malloc(num_threads * sizeof(char*));
 
     for (int i = 0; i < num_threads; i++) {
-	stacks[i] = malloc(PGSIZE);
 	args[2 * i] = 2;
 	args[2 * i + 1] = i;
-	osthread_create(&threads[i], thread_func_write_global_vars, args + 2 * i, stacks[i]);
+	osthread_create(&threads[i], thread_func_write_global_vars, args + 2 * i);
     }
 
     for (int i = 0; i < num_threads; i++) {
@@ -167,10 +197,6 @@ int test_write_global_vars(void) {
 	printf("Test Write Global Vars PASSED\n");
     }
 
-    for (int i = 0; i < num_threads; i++) {
-	free(stacks[i]);
-    }
-    free(stacks);
 
     return 0;
 }
@@ -191,13 +217,11 @@ int test_read_global_vars(void) {
     osthread thread;
 
     int args[] = {17};
-    char* stack = malloc(PGSIZE);
 
-    osthread_create(&thread, thread_func_read_global_vars, &args, stack); 
+    osthread_create(&thread, thread_func_read_global_vars, &args); 
 
     osthread_join(thread, 0);
 
-    free(stack);
     return 0;
 }
 
@@ -215,13 +239,11 @@ int test_basic_args(void) {
     osthread thread;
 
     int args[] = {14, 43};
-    char* stack = malloc(PGSIZE);
 
-    osthread_create(&thread, thread_func_basic_args, &args, stack); 
+    osthread_create(&thread, thread_func_basic_args, &args); 
 
     osthread_join(thread, 0);
 
-    free(stack);
     return 0;
 }
 
@@ -234,15 +256,12 @@ void* thread_func_join(void* args) {
 int test_join(void) {
     osthread thread;
 
-    char* stack = malloc(PGSIZE);
-
-    osthread_create(&thread, thread_func_join, 0, stack); 
+    osthread_create(&thread, thread_func_join, 0); 
 
     osthread_join(thread, 0);
 
     printf("Exiting Test Join\n");
 
-    free(stack);
     return 0;
 }
 
@@ -254,6 +273,7 @@ int main(int argc, char** argv) {
     test_kill_children();
     test_sbrk();
     test_sbrk_thread();
+    test_check_stack();
     printf("Tests Complete\n");
     exit(0);
 }

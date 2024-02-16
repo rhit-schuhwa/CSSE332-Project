@@ -102,7 +102,7 @@ sys_osthread_create(void) {
   argaddr(2, &args);
   argaddr(3, &stack);
 
-  return osthread_create((osthread*)thread, func, (void*)args, (void*)stack);
+  return osthread_create((osthread*)thread, func, (void*)args);
 }
 
 uint64
