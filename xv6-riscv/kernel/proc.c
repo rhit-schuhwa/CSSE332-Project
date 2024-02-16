@@ -359,7 +359,6 @@ growproc(int n)
   while ((iterator = iterator->next) != &p->list_t) {
     pp = (struct proc *)iterator;
     pp->sz = sz;
-    //release(&pp->lock);
   }
 
   return 0;
@@ -455,10 +454,6 @@ int osthread_create(osthread* thread, void*(*func)(void*), void* args) {
   acquire(&wait_lock);
   np->parent = p;
   release(&wait_lock); 
-  
-  // acquire(&np->lock);
-  // np->trapframe->sp = p->trapframe->sp;
-  // release(&np->lock);
 
   acquire(&np->lock);
   np->trapframe->epc = (uint64)func;  // set pc of the thread

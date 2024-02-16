@@ -210,8 +210,6 @@ void* thread_func_write_global_vars(void* args) {
 
     sleep(5 * inputs[1]);
 
-    // printf("Write Global Var thread %d exiting\n", inputs[1]);
-
     exit(0);
 }
 
@@ -229,7 +227,6 @@ int test_write_global_vars(void) {
 
     for (int i = 0; i < num_threads; i++) {
 	osthread_join(threads[i], 0);
-	// printf("Done waiting for thread %d\n", i);
     }
 
     if (write_global_var != 2 * num_threads) {
